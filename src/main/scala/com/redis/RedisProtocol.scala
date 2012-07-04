@@ -50,13 +50,18 @@ private [redis] trait Reply {
     case (BULK, s) if Parsers.parseInt(s) == -1 => None
   }
 
+  val longReply: Reply[Option[Long]] = {
+    case (INT, s) => Some(Parsers.parseLong(s))
+    case (BULK, s) if Parsers.parseLong(s) == -1 => None
+  }
+
   val singleLineReply: SingleReply = {
     case (SINGLE, s) => Some(s)
     case (INT, s) => Some(s)
   }
 
   val bulkReply: SingleReply = {
-    case (BULK, s) => 
+    case (BULK, s) =>
       Parsers.parseInt(s) match {
         case -1 => None
         case l => {
@@ -79,7 +84,7 @@ private [redis] trait Reply {
     case (MULTI, str) =>
       Parsers.parseInt(str) match {
         case -1 => None
-        case n if n == handlers.size => 
+        case n if n == handlers.size =>
           Some(handlers.map(_.apply).toList)
         case n => throw new Exception("Protocol error: Expected "+handlers.size+" results, but got "+n)
       }
@@ -94,12 +99,16 @@ private [redis] trait Reply {
     case (SINGLE, QUEUED) => Some(Int.MaxValue)
   }
 
+  def queuedReplyLong: Reply[Option[Long]] = {
+    case (SINGLE, QUEUED) => Some(Long.MaxValue)
+  }
+
   def queuedReplyList: MultiReply = {
     case (SINGLE, QUEUED) => Some(List(Some(QUEUED)))
   }
 
   def receive[T](pf: Reply[T]): T = readLine match {
-    case null => 
+    case null =>
       throw new RedisConnectionException("Connection dropped ..")
     case line =>
       (pf orElse errReply) apply ((line(0).toChar,line.slice(1,line.length)))
@@ -110,13 +119,15 @@ private [redis] trait R extends Reply {
   def asString: Option[String] = receive(singleLineReply) map Parsers.parseString
 
   def asBulk[T](implicit parse: Parse[T]): Option[T] =  receive(bulkReply) map parse
-  
+
   def asBulkWithTime[T](implicit parse: Parse[T]): Option[T] = receive(bulkReply orElse multiBulkReply) match {
     case x: Some[Array[Byte]] => x.map(parse(_))
     case _ => None
   }
 
   def asInt: Option[Int] =  receive(integerReply orElse queuedReplyInt)
+
+  def asLong: Option[Long] =  receive(longReply orElse queuedReplyLong)
 
   def asBoolean: Boolean = receive(integerReply orElse singleLineReply) match {
     case Some(n: Int) => n > 0

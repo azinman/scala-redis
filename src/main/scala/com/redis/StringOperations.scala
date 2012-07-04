@@ -13,39 +13,39 @@ trait StringOperations { self: Redis =>
   // gets the value for the specified key.
   def get[A](key: Any)(implicit format: Format, parse: Parse[A]): Option[A] =
     send("GET", List(key))(asBulk)
-  
+
   // GETSET (key, value)
   // is an atomic set this value and return the old value command.
   def getset[A](key: Any, value: Any)(implicit format: Format, parse: Parse[A]): Option[A] =
     send("GETSET", List(key, value))(asBulk)
-  
+
   // SETNX (key, value)
   // sets the value for the specified key, only if the key is not there.
   def setnx(key: Any, value: Any)(implicit format: Format): Boolean =
     send("SETNX", List(key, value))(asBoolean)
 
   def setex(key: Any, expiry: Int, value: Any)(implicit format: Format): Boolean =
-    send("SETEX", List(key, expiry, value))(asBoolean) 
+    send("SETEX", List(key, expiry, value))(asBoolean)
 
   // INCR (key)
   // increments the specified key by 1
-  def incr(key: Any)(implicit format: Format): Option[Int] =
-    send("INCR", List(key))(asInt)
+  def incr(key: Any)(implicit format: Format): Option[Long] =
+    send("INCR", List(key))(asLong)
 
   // INCR (key, increment)
   // increments the specified key by increment
-  def incrby(key: Any, increment: Int)(implicit format: Format): Option[Int] =
-    send("INCRBY", List(key, increment))(asInt)
+  def incrby(key: Any, increment: Long)(implicit format: Format): Option[Long] =
+    send("INCRBY", List(key, increment))(asLong)
 
   // DECR (key)
   // decrements the specified key by 1
-  def decr(key: Any)(implicit format: Format): Option[Int] =
-    send("DECR", List(key))(asInt)
+  def decr(key: Any)(implicit format: Format): Option[Long] =
+    send("DECR", List(key))(asLong)
 
   // DECR (key, increment)
   // decrements the specified key by increment
-  def decrby(key: Any, increment: Int)(implicit format: Format): Option[Int] =
-    send("DECRBY", List(key, increment))(asInt)
+  def decrby(key: Any, increment: Long)(implicit format: Format): Option[Long] =
+    send("DECRBY", List(key, increment))(asLong)
 
   // MGET (key, key, key, ...)
   // get the values of all the specified keys.
@@ -63,13 +63,13 @@ trait StringOperations { self: Redis =>
     send("MSETNX", kvs.foldRight(List[Any]()){ case ((k,v),l) => k :: v :: l })(asBoolean)
 
   // SETRANGE key offset value
-  // Overwrites part of the string stored at key, starting at the specified offset, 
+  // Overwrites part of the string stored at key, starting at the specified offset,
   // for the entire length of value.
   def setrange(key: Any, offset: Int, value: Any)(implicit format: Format): Option[Int] =
     send("SETRANGE", List(key, offset, value))(asInt)
 
   // GETRANGE key start end
-  // Returns the substring of the string value stored at key, determined by the offsets 
+  // Returns the substring of the string value stored at key, determined by the offsets
   // start and end (both are inclusive).
   def getrange[A](key: Any, start: Int, end: Int)(implicit format: Format, parse: Parse[A]): Option[A] =
     send("GETRANGE", List(key, start, end))(asBulk)
